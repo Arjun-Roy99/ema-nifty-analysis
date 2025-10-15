@@ -4,3 +4,5 @@ pandas
 matplotlib
 plotly
 requests
+lxml
+html5lib
