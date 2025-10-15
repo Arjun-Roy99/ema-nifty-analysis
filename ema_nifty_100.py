@@ -18,13 +18,17 @@ st.write("""
     """
 )
 
-#Parameters for lookback
+#Parameters for lookback and cache clear button
 lookback_days = st.sidebar.selectbox("Lookback Period (days)", [30, 60, 120], index=1)
 show_downloads = st.sidebar.checkbox("Show Stock Data Download Progress", True)
 show_all_plots = st.sidebar.checkbox("Show All Matching Stock Charts", True)
+# Sidebar cache clear button
+if st.sidebar.button("🧹 Clear Cache"):
+    st.cache_data.clear()
+    st.success("Cache cleared successfully!")
 
 #Helper functions
-@st.cache_data
+@st.cache_data(ttl=3600)
 def get_tickers():
     headers = {
         "User-Agent": (
@@ -50,7 +54,7 @@ def get_tickers():
     tickers = [symbol + ".NS" for symbol in tickers_50 + tickers_next_50]
     return tickers
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=3600)
 def download_data(tickers, start_date, end_date):
     all_data = {}
     counter_text = st.empty()  # placeholder for the counter
