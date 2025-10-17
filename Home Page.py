@@ -1,12 +1,12 @@
 import streamlit as st
 
 # Page config
-st.set_page_config(page_title="Stock Analysis Hub", layout="wide")
+st.set_page_config(page_title="NIFTY Stock Analysis Hub", layout="wide")
 
 # App title and description
-st.title("📊 NIFTY 100 Analysis Hub")
+st.title("📊 NIFTY Golden Cross Screener Hub")
 st.write("""
-Welcome to the **Stock Analysis Hub**
+Welcome to the **NIFTY Golden Cross Screener Hub**
 
 Choose one of the modules below to get started:
 """)
@@ -24,7 +24,7 @@ with col1:
     (EMA5 > EMA9 > EMA14) within the last few days.
     """)
     if st.button("🔍 Scan NIFTY 100"):
-        st.switch_page("pages/ema_nifty_100.py")
+        st.switch_page("pages/2_NIFTY 100 Screener.py")
 
 # Button 2: Stock Compare or another feature
 with col2:
@@ -34,7 +34,7 @@ with col2:
     (EMA5 > EMA9 > EMA14) within the last few days.
     """)
     if st.button("🔍 Scan NIFTY Smallcap 250"):
-        st.switch_page("pages/ema_nifty_smallcap_250.py")
+        st.switch_page("pages/3_NIFTY Smallcap 250 Screener.py")
 
 st.markdown("---")
 st.caption("Built by AR99 | Data powered by Yahoo Finance")
