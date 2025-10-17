@@ -1,94 +1,81 @@
-import streamlit as st
+import  streamlit as st
 import yfinance as yf
 import datetime
 import pandas as pd
-import requests
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-
+import os
 
 #Page config
 
-st.set_page_config(page_title="NIFTY 100 Golden Cross Screener", layout = "wide")
+st.set_page_config(page_title = "NIFTY 250 Smallcap Golden Cross Screener", layout = "wide")
 
-st.title("NIFTY 100 Golden Cross Screener")
+st.title("NIFTY Smallcap 250 Golden Cross Screener")
 st.write("""
-    This app scans **NIFTY 50 + NIFTY Next 50** stocks for a **Golden Cross** pattern
+    This app scans **NIFTY Smallcap 250** stocks for a **Golden Cross** pattern
     (EMA5 > EMA9 > EMA14) that occurred in the **last 5 days**.
-    """
-)
+    """)
 
 #Parameters for lookback and cache clear button
-lookback_days = st.sidebar.selectbox("Lookback Period (days)", [30, 60, 120], index=1)
+lookback_days = st.sidebar.selectbox("Lookback Period (days)", [30,60,120], index = 1)
 show_downloads = st.sidebar.checkbox("Show Stock Data Download Progress", True)
-show_all_plots = st.sidebar.checkbox("Show All Matching Stock Charts", True)
-# Sidebar cache clear button
+show_all_plots = st.sidebar.checkbox("Plot Charts (check to generate plots)", True)
 if st.sidebar.button("🧹 Clear Cache"):
     st.cache_data.clear()
     st.success("Cache cleared successfully!")
 
 #Helper functions
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl = 3600)
 def get_tickers():
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        )
-    }
 
-    #NIFTY 50
-    nifty_50_url = "https://en.wikipedia.org/wiki/NIFTY_50"
-    response = requests.get(nifty_50_url, headers=headers)
-    tables = pd.read_html(response.text)
-    nifty_50_table = tables[1]
-    tickers_50 = nifty_50_table["Symbol"].tolist()
+    csv_path = os.path.join(os.path.dirname(__file__), "ind_niftysmallcap250list.csv")
+    nifty_smallcap_250_table = pd.read_csv(csv_path)
 
-    # NIFTY NEXT 50
-    nifty_next_50_url = "https://en.wikipedia.org/wiki/NIFTY_Next_50"
-    response = requests.get(nifty_next_50_url, headers=headers)
-    tables = pd.read_html(response.text)
-    nifty_next_50_table = tables[2]
-    tickers_next_50 = nifty_next_50_table["Symbol"].tolist()
+    tickers_smallcap_250 = nifty_smallcap_250_table['Symbol'].tolist()
 
-    tickers = [symbol + ".NS" for symbol in tickers_50 + tickers_next_50]
+    #Convert symbols to Yahoo Finance format
+    tickers = [symbol + '.NS' for symbol in tickers_smallcap_250]
     return tickers
 
-@st.cache_data(show_spinner=False, ttl=3600)
+@st.cache_data(ttl=3600)
 def download_data(tickers, start_date, end_date):
-    all_data = {}
-    counter_text = st.empty()  # placeholder for the counter
 
-    for i,ticker in enumerate(tickers, start = 1):
+    #Download historical data for all NIFTY Smallcap 250 stocks
+    all_data = {}
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    counter_text = st.empty() #Placeholder for counter
+
+    for ticker in tickers:
         try:
-            df = yf.download(ticker, start = start_date, end = end_date, progress = False)
+            df = yf.download(ticker, start=start_date, end=end_date, progress = False)
 
             if not df.empty:
                 all_data[ticker] = df
+            else:
+                st.info(f"No data for {ticker}")
             
             counter_text.markdown(f"**Stocks downloaded:** {len(all_data)} / {len(tickers)} — just fetched `{ticker}`")
+
         except Exception as e:
-            st.write(f"Error downloading {ticker} data : {e}")
+            st.write(f"Error downloading {ticker}: {e}")
+
     return all_data
 
+# Calculate EMAs and generate trading signals
 def find_golden_crosses(all_data):
     final_list = []
+
     for ticker, df in all_data.items():
-        df["EMA5"] = df["Close"].ewm(span = 5, adjust = False).mean()
-        df["EMA9"] = df["Close"].ewm(span = 9, adjust = False).mean()
-        df["EMA14"] = df["Close"].ewm(span = 14, adjust = False).mean()
 
-        df["golden_cross"] = (
-            (df["EMA5"] > df["EMA9"])
-            & (df["EMA9"] > df["EMA14"])
-            & (df["EMA5"].shift(1) <= df["EMA9"].shift(1))
-            & (df["EMA9"].shift(1) <= df["EMA14"].shift(1))
-        )
+        df['EMA5'] = df['Close'].ewm(span = 5, adjust = False).mean()
+        df['EMA9'] = df['Close'].ewm(span = 9, adjust = False).mean()
+        df['EMA14'] = df['Close'].ewm(span = 14, adjust = False).mean()
 
-        if df["golden_cross"].tail(5).any():
+        df['golden_cross'] = (df['EMA5'] > df['EMA9']) & (df['EMA9'] > df['EMA14']) & (df['EMA5'].shift(1) <= df['EMA9'].shift(1)) & (df['EMA9'].shift(1) <= df['EMA14'].shift(1))
+        if df['golden_cross'].tail(5).any():
             final_list.append(ticker)
 
-    return final_list
+        return final_list
 
 def plot_stock(df, ticker):
     """
@@ -149,14 +136,16 @@ if st.button(" RUN SCAN "):
 
     with st.spinner("Scanning for golden crosses..."):
         final_list = find_golden_crosses(all_data)
-
+    
     st.subheader(f"✨ Stocks showing a Golden Cross in the last 5 days: {len(final_list)}")
+
     if final_list:
-        st.write(", ".join(final_list))
+        st.write(",".join(final_list))
 
         if show_all_plots:
             for ticker in final_list:
-                with st.expander(f"Show chart for {ticker}"):
+                with st.exapnder(f"Show chart for {ticker}"):
                     plot_stock(all_data[ticker], ticker)
+
     else:
-        st.info("No golden crosses found in the selected period.")
+        st.info("No golden crosses found in the selected time period.")
