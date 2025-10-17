@@ -37,12 +37,11 @@ def get_tickers():
     tickers = [symbol + '.NS' for symbol in tickers_smallcap_250]
     return tickers
 
-@st.cache_data(ttl=3600)
+@st.cache_data(show_spinner = False, ttl=3600)
 def download_data(tickers, start_date, end_date):
 
     #Download historical data for all NIFTY Smallcap 250 stocks
     all_data = {}
-    st.markdown("<br><br>", unsafe_allow_html=True)
     counter_text = st.empty() #Placeholder for counter
 
     for ticker in tickers:
