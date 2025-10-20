@@ -33,8 +33,8 @@ with col2:
     Scan **NIFTY Midcap 100** stocks for a **Golden Cross pattern**
     (EMA5 > EMA9 > EMA14) within the last few days.
     """)
-    if st.button("🔍 Scan NIFTY Smallcap 250"):
-        st.switch_page("pages/4_NIFTY Midcap 100 Screener.py")
+    if st.button("🔍 Scan NIFTY Midcap 100"):
+        st.switch_page("pages/3_NIFTY Midcap 100 Screener.py")
 
 # Button 3: NIFTY 250 Smallcap Screener
 with col3:
@@ -44,7 +44,7 @@ with col3:
     (EMA5 > EMA9 > EMA14) within the last few days.
     """)
     if st.button("🔍 Scan NIFTY Smallcap 250"):
-        st.switch_page("pages/3_NIFTY Smallcap 250 Screener.py")
+        st.switch_page("pages/4_NIFTY Smallcap 250 Screener.py")
 
 st.markdown("---")
 st.caption("Built by AR99 | Data powered by Yahoo Finance")
