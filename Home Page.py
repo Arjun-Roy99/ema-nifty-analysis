@@ -14,7 +14,7 @@ Choose one of the modules below to get started:
 st.markdown("---")
 
 # Create two columns for layout
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(2)
 
 # Button 1: NIFTY 100 Large Cap
 with col1:
@@ -37,7 +37,7 @@ with col2:
         st.switch_page("pages/4_NIFTY Midcap 100 Screener.py")
 
 # Button 3: NIFTY 250 Smallcap Screener
-with col2:
+with col3:
     st.subheader("✨ NIFTY Smallcap 250 Golden Cross Screener")
     st.write("""
     Scan **NIFTY Smallcap 250** stocks for a **Golden Cross pattern**
