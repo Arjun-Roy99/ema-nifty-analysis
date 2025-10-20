@@ -14,7 +14,7 @@ Choose one of the modules below to get started:
 st.markdown("---")
 
 # Create two columns for layout
-col1, col2, col3 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 # Button 1: NIFTY 100 Large Cap
 with col1:
