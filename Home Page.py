@@ -16,9 +16,9 @@ st.markdown("---")
 # Create two columns for layout
 col1, col2 = st.columns(2)
 
-# Button 1: Golden Cross Screener
+# Button 1: NIFTY 100 Large Cap
 with col1:
-    st.subheader("✨ NIFTY 100 Golden Cross Screener")
+    st.subheader("✨ NIFTY Large Cap 100 Golden Cross Screener")
     st.write("""
     Scan **NIFTY 50 + NIFTY Next 50** stocks for a **Golden Cross pattern**
     (EMA5 > EMA9 > EMA14) within the last few days.
@@ -26,7 +26,17 @@ with col1:
     if st.button("🔍 Scan NIFTY 100"):
         st.switch_page("pages/2_NIFTY 100 Screener.py")
 
-# Button 2: Stock Compare or another feature
+# Button 2: NIFTY 100 Midcap Screener
+with col2:
+    st.subheader("✨ NIFTY Midcap 100 Golden Cross Screener")
+    st.write("""
+    Scan **NIFTY Midcap 100** stocks for a **Golden Cross pattern**
+    (EMA5 > EMA9 > EMA14) within the last few days.
+    """)
+    if st.button("🔍 Scan NIFTY Smallcap 250"):
+        st.switch_page("pages/4_NIFTY Midcap 100 Screener.py")
+
+# Button 3: NIFTY 250 Smallcap Screener
 with col2:
     st.subheader("✨ NIFTY Smallcap 250 Golden Cross Screener")
     st.write("""
@@ -38,3 +48,5 @@ with col2:
 
 st.markdown("---")
 st.caption("Built by AR99 | Data powered by Yahoo Finance")
+
+
