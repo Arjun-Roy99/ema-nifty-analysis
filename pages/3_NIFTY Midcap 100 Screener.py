@@ -12,12 +12,15 @@ st.set_page_config(page_title = "NIFTY 100 Midcap Golden Cross Screener", layout
 
 st.title("NIFTY Midcap 100 Golden Cross Screener")
 st.write("""
-    This app scans **NIFTY Midcap 100** stocks for a **Golden Cross** pattern
-    (EMA5 > EMA9 > EMA14) that occurred in the **last 5 days**.
+    This app scans **NIFTY Midcap 100** stocks for a **Golden Cross** pattern (STMA > MTMA > LTMA) that occurred in the **last 5 days**.
     """)
 
 #Parameters for lookback and cache clear button
-lookback_days = st.sidebar.selectbox("Lookback Period (days)", [30,60,120], index = 1)
+lookback_days = st.sidebar.selectbox("Lookback Period (days)", [30, 60, 120, 180, 240, 300], index = 1)
+short_term_days = st.sidebar.slider("Short-term range:", min_value = 3, max_value = 50, value = 5)
+medium_term_days = st.sidebar.slider("Medium-term range:", min_value = 5, max_value = 150, value = 9)
+long_term_days = st.sidebar.slider("Long-term range:", min_value = 9, max_value = 200, value = 14)
+ma_type = st.sidebar.pills("Select type of moving average:",["EMA", "SMA"], selection_mode="single", default = "EMA")
 show_downloads = st.sidebar.checkbox("Show Stock Data Download Progress", True)
 show_all_plots = st.sidebar.checkbox("Plot Charts (check to generate plots)", True)
 if st.sidebar.button("🧹 Clear Cache"):
@@ -37,69 +40,81 @@ def get_tickers():
     tickers = [symbol + '.NS' for symbol in tickers_smallcap_250]
     return tickers
 
-@st.cache_data(show_spinner = False, ttl=3600)
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_ticker_data(ticker, start_date, end_date):
+    return yf.download(ticker, start = start_date, end = end_date, progress = False)
+
 def download_data(tickers, start_date, end_date):
-
-    #Download historical data for all NIFTY Smallcap 250 stocks
     all_data = {}
-    counter_text = st.empty() #Placeholder for counter
+    counter_text = st.empty()  # placeholder for the counter
 
-    for ticker in tickers:
+    for i,ticker in enumerate(tickers, start = 1):
         try:
-            df = yf.download(ticker, start=start_date, end=end_date, progress = False)
+            df = fetch_ticker_data(ticker, start_date, end_date)
 
             if not df.empty:
                 all_data[ticker] = df
-            else:
-                st.info(f"No data for {ticker}")
             
-            counter_text.markdown(f"**Stocks downloaded:** {len(all_data)} / {len(tickers)} — just fetched `{ticker}`")
-
+            if show_downloads == True:
+                counter_text.markdown(f"**Stocks downloaded:** {len(all_data)} / {len(tickers)} — just fetched `{ticker}`")
         except Exception as e:
-            st.write(f"Error downloading {ticker}: {e}")
-
+            st.write(f"Error downloading {ticker} data : {e}")
     return all_data
 
 # Calculate EMAs and generate trading signals
-def find_golden_crosses(all_data):
+def find_golden_crosses(all_data, ma_type, short_term_days_input, medium_term_days_input, long_term_days_input):
     final_list = []
 
     for ticker, df in all_data.items():
 
-        df['EMA5'] = df['Close'].ewm(span = 5, adjust = False).mean()
-        df['EMA9'] = df['Close'].ewm(span = 9, adjust = False).mean()
-        df['EMA14'] = df['Close'].ewm(span = 14, adjust = False).mean()
+        if ma_type == "EMA": #Exponential short, medium and long-term moving averages
+    
+            df["STMA"] = df["Close"].ewm(span = short_term_days_input, adjust = False).mean()
+            df["MTMA"] = df["Close"].ewm(span = medium_term_days_input, adjust = False).mean()
+            df["LTMA"] = df["Close"].ewm(span = long_term_days_input, adjust = False).mean()
 
-        df['golden_cross'] = (df['EMA5'] > df['EMA9']) & (df['EMA9'] > df['EMA14']) & (df['EMA5'].shift(1) <= df['EMA9'].shift(1)) & (df['EMA9'].shift(1) <= df['EMA14'].shift(1))
+        else: #Simple short, medium and long-term moving averages
+
+            df["STMA"] = df["Close"].rolling(window = short_term_days_input).mean()
+            df["MTMA"] = df["Close"].rolling(window = medium_term_days_input).mean()
+            df["LTMA"] = df["Close"].rolling(window = long_term_days_input).mean()
+
+        df["golden_cross"] = (
+            (df["STMA"] > df["MTMA"])
+            & (df["MTMA"] > df["LTMA"])
+            & (df["STMA"].shift(1) <= df["MTMA"].shift(1))
+            & (df["MTMA"].shift(1) <= df["LTMA"].shift(1))
+        )
+
         if df['golden_cross'].tail(5).any():
             final_list.append(ticker)
 
-        return final_list
+    return final_list
 
-def plot_stock(df, ticker):
+def plot_stock(df, ticker, ma_type_input):
     """
-    Plots stock Close price with EMA5, EMA9, EMA14 and marks Golden Cross points.
+    Plots stock Close price with STMA, MTMA and LTMA and marks Golden Cross points.
     Uses Matplotlib for faster rendering and white background.
     Legend is displayed below the plot area without overlapping labels.
     """
-    df = df[['Close', 'EMA5', 'EMA9', 'EMA14', 'golden_cross']].dropna().copy()
+    df = df[['Close', 'STMA', 'MTMA', 'LTMA', 'golden_cross']].dropna().copy()
 
     fig, ax = plt.subplots(figsize=(10, 4))
     fig.patch.set_facecolor('white')   # full background white
     ax.set_facecolor('white')          # plot area background white
 
-    # Plot Close and EMAs
+    # Plot Close and MAs
     ax.plot(df.index, df['Close'], label='Close', color='black', linewidth=2)
-    ax.plot(df.index, df['EMA5'], label='EMA 5', color='red', linewidth=1.5)
-    ax.plot(df.index, df['EMA9'], label='EMA 9', color='blue', linewidth=1.5)
-    ax.plot(df.index, df['EMA14'], label='EMA 14', color='goldenrod', linewidth=1.5)
+    ax.plot(df.index, df['STMA'], label='STMA', color='red', linewidth=1.5)
+    ax.plot(df.index, df['MTMA'], label='MTMA', color='blue', linewidth=1.5)
+    ax.plot(df.index, df['LTMA'], label='LTMA', color='goldenrod', linewidth=1.5)
 
     # Mark Golden Cross points
     cross_points = df[df['golden_cross']]
     ax.scatter(cross_points.index, cross_points['Close'], color='green', s=40, label='Golden Cross', zorder=5)
 
     # Formatting
-    ax.set_title(f"{ticker} — Price with EMAs", fontsize=13, loc='left')
+    ax.set_title(f"{ticker} — Price with {ma_type_input}s", fontsize=13, loc='left')
     ax.set_xlabel("Date", labelpad=10)  # add space below x-axis label
     ax.set_ylabel("Price (INR)")
 
@@ -121,10 +136,26 @@ def plot_stock(df, ticker):
     plt.subplots_adjust(bottom=0.38)
 
     st.pyplot(fig)
+    plt.close(fig)
+
+def check_validity_of_inputs():
+
+    if not (short_term_days < medium_term_days < long_term_days):
+        return False
+    if long_term_days > lookback_days:
+        return False
+    
+    return True
 
 #App logic
 
 if st.button(" RUN SCAN "):
+
+    with st.spinner("Checking input validity..."):
+        if not check_validity_of_inputs():
+            st.error("Invalid inputs - kindly fix the window lengths/lookback ranges and try again")
+            st.stop()   
+
     with st.spinner("Fetching data..."):
         tickers = get_tickers()
         end_date = datetime.datetime.today()
@@ -134,7 +165,7 @@ if st.button(" RUN SCAN "):
     st.success(f"✅ Downloaded data for {len(all_data)} stocks.")
 
     with st.spinner("Scanning for golden crosses..."):
-        final_list = find_golden_crosses(all_data)
+        final_list = find_golden_crosses(all_data, ma_type, short_term_days, medium_term_days, long_term_days)
     
     st.subheader(f"✨ Stocks showing a Golden Cross in the last 5 days: {len(final_list)}")
 
@@ -143,8 +174,8 @@ if st.button(" RUN SCAN "):
 
         if show_all_plots:
             for ticker in final_list:
-                with st.exapnder(f"Show chart for {ticker}"):
-                    plot_stock(all_data[ticker], ticker)
-
+                with st.expander(f"Show chart for {ticker}"):
+                    plot_stock(all_data[ticker], ticker, ma_type)
+                    
     else:
         st.info("No golden crosses found in the selected time period.")
